@@ -1,4 +1,4 @@
-name: Fix MediaPipe version
+name: Tune spatial effect
 
 on:
   push:
@@ -16,9 +16,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Replace invalid MediaPipe version
+      - name: Reduce head-coupled perspective strength
         run: |
-          sed -i 's/@mediapipe\/tasks-vision@0\.10\.22/@mediapipe\/tasks-vision@0.10.21/g' index.html
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          s = s.replace('const VIEW_SCALE=1.45,HEAD_GAIN_X=1.85,HEAD_GAIN_Y=1.55;',
+                        'const VIEW_SCALE=1.45,HEAD_GAIN_X=0.95,HEAD_GAIN_Y=0.85;')
+          s = s.replace('target.x=clamp((e.x-neutral.x)*HEAD_GAIN_X,-.095,.095);target.y=clamp((e.y-neutral.y)*HEAD_GAIN_Y,-.075,.075);target.z=clamp(lerp(neutral.z,e.z,.35),.28,.65);',
+                        'target.x=clamp((e.x-neutral.x)*HEAD_GAIN_X,-.060,.060);target.y=clamp((e.y-neutral.y)*HEAD_GAIN_Y,-.050,.050);target.z=clamp(lerp(neutral.z,e.z,.18),.30,.62);')
+          p.write_text(s)
+          PY
           if git diff --quiet -- index.html; then
             echo "No patch needed"
             exit 0
@@ -26,5 +35,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Fix MediaPipe package version"
+          git commit -m "Reduce spatial perspective strength"
           git push
